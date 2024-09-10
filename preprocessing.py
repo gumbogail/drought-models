@@ -5,6 +5,9 @@ import tensorflow as tf
 import sqlite3
 import requests
 
+# Restrict TensorFlow to only use the CPU
+tf.config.set_visible_devices([], 'GPU')
+
 # SQLite database connection
 conn = sqlite3.connect('weather_data.db')
 cursor = conn.cursor()
