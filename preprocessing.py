@@ -45,9 +45,12 @@ def calculate_spi_and_lta(current_rainfall, historical_rainfall):
     spi = rainfall_anomaly / std
     return lta, std, rainfall_anomaly, spi
 
+
 # Load TensorFlow models (replace with your actual model paths)
+# Make sure to use the raw string (r'path') or double backslashes to avoid escape sequences in file paths
 drought_occurrence_model = tf.keras.models.load_model(r'C:\Users\abiga\OneDrive\Desktop\drought models\drought_occurrence_model.keras')
 drought_severity_model = tf.keras.models.load_model(r'C:\Users\abiga\OneDrive\Desktop\drought models\drought_severity_model.keras')
+
 
 def process_and_store_data(data):
     """Processes data and stores predictions in the SQLite database"""
