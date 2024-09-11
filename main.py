@@ -119,7 +119,7 @@ async def predict_next_three_months():
 
             # Dummy input data for predictions - replace with actual input data processing
             # You may need to adjust this depending on the input your model expects
-            input_data = np.random.rand(1, 10)  # Assuming your model takes an input of shape (1, 10)
+            input_data = np.random.rand(1, 11)  # Assuming your model takes an input of shape (1, 10)
 
             # Predict drought occurrence and severity
             occurrence_prediction = drought_occurrence_model.predict(input_data)
