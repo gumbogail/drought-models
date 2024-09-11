@@ -40,6 +40,7 @@
 #     app.run(debug=True)
 
 import json
+import os
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from datetime import datetime, timedelta
@@ -47,9 +48,15 @@ import sqlite3
 import numpy as np
 import tensorflow as tf
 
+# Set environment variable to suppress GPU messages
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Suppresses TensorFlow info & warnings about GPU
+
+# Explicitly disable GPU, use CPU only
+tf.config.set_visible_devices([], 'GPU')
+
 # Load your models (replace with actual paths to your models)
-drought_occurrence_model = tf.keras.models.load_model('path_to_occurrence_model')
-drought_severity_model = tf.keras.models.load_model('path_to_severity_model')
+drought_occurrence_model = tf.keras.models.load_model('drought_occurrence_model.keras')
+drought_severity_model = tf.keras.models.load_model('drought_severity_model.keras')
 
 app = FastAPI()
 
