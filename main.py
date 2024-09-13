@@ -1,75 +1,23 @@
-
-# import json
-# from fastapi import FastAPI, HTTPException
-# from pydantic import BaseModel
-
-# import sqlite3
-
-# app = FastAPI()
-
-# class WeatherData(BaseModel):
-#     date: str
-#     year: int
-#     month: int
-#     drought_occurrence: int
-#     drought_severity: int
-
-# @app.get("/weather_data", response_model=WeatherData)
-# async def get_weather_data():
-#     try:
-#         with sqlite3.connect('weather_data.db') as conn:
-#             cursor = conn.execute("SELECT date, year, month, drought_occurrence, drought_severity FROM WeatherData ORDER BY id DESC LIMIT 1")
-#             result = cursor.fetchone()
-
-#         if result:
-#             data = WeatherData(
-#                 date=result[0],
-#                 year=result[1],
-#                 month=result[2],
-#                 drought_occurrence=result[3],
-#                 drought_severity=result[4]
-#             )
-#             return data
-#         else:
-#             raise HTTPException(status_code=404, detail="No data available")
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=str(e))
-
-
-# if __name__ == "__main__":
-#     app.run(debug=True)
-
-import json
-import os
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel
-from datetime import datetime, timedelta
-import sqlite3
+from typing import List
 import numpy as np
 import tensorflow as tf
+import sqlite3
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
 
-# Set environment variable to suppress GPU messages
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Suppresses TensorFlow info & warnings about GPU
+# Initialize FastAPI app
+app = FastAPI()
 
-# Explicitly disable GPU, use CPU only
-tf.config.set_visible_devices([], 'GPU')
-
-# Load your models (replace with actual paths to your models)
+# Load your models
 drought_occurrence_model = tf.keras.models.load_model('drought_occurrence_model.keras')
 drought_severity_model = tf.keras.models.load_model('drought_severity_model.keras')
-
-app = FastAPI()
 
 class WeatherData(BaseModel):
     date: str
     year: int
     month: int
-    drought_occurrence: int
-    drought_severity: int
-
-class PredictionData(BaseModel):
-    month: int
-    year: int
     drought_occurrence: int
     drought_severity: int
 
@@ -94,8 +42,14 @@ async def get_weather_data():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/predict_next_three_months", response_model=list[PredictionData])
-async def predict_next_three_months():
+class PredictionData(BaseModel):
+    month: int
+    year: int
+    drought_occurrence: float
+    drought_severity: int
+
+@app.get("/predict_next_three_months", response_model=List[PredictionData])
+async def predict_next_three_months(latitude: float, longitude: float):
     try:
         # Get the most recent weather data from the database
         with sqlite3.connect('weather_data.db') as conn:
@@ -105,31 +59,45 @@ async def predict_next_three_months():
         if not result:
             raise HTTPException(status_code=404, detail="No historical data available for predictions")
 
-        # Extract the current year and month
         current_year = result[0]
         current_month = result[1]
 
-        # Generate predictions for the next three months
         predictions = []
         for i in range(1, 4):
-            # Calculate the month and year for the prediction
-            future_date = datetime(current_year, current_month, 1) + timedelta(days=30*i)
+            # Handle month and year progression using relativedelta
+            future_date = datetime(current_year, current_month, 1) + relativedelta(months=i)
             future_year = future_date.year
             future_month = future_date.month
 
-            # Dummy input data for predictions - replace with actual input data processing
-            # You may need to adjust this depending on the input your model expects
-            input_data = np.random.rand(1, 11)  # Assuming your model takes an input of shape (1, 10)
+            # Fetch real input features for prediction from the database
+            with sqlite3.connect('weather_data.db') as conn:
+                cursor = conn.execute(f"""
+                    SELECT rainfall, lta, std, rainfall_anomaly, spi, drought_occurrence, drought_severity, month, year
+                    FROM WeatherData
+                    WHERE year = {current_year} AND month = {current_month}
+                    ORDER BY id DESC LIMIT 1
+                """)
+                feature_result = cursor.fetchone()
+
+            if not feature_result:
+                raise HTTPException(status_code=404, detail="No feature data available")
+
+            # Create input array of features including latitude and longitude
+            input_data = np.array([list(feature_result) + [latitude, longitude]]).astype(np.float32)
+
+            # Ensure the input shape is (1, 13) if you added 2 more features
+            if input_data.shape[1] != 11:
+                raise ValueError(f"Expected input shape (1, 11), but got {input_data.shape}")
 
             # Predict drought occurrence and severity
             occurrence_prediction = drought_occurrence_model.predict(input_data)
             severity_prediction = drought_severity_model.predict(input_data)
 
-            # Convert predictions to appropriate output
-            drought_occurrence = int(occurrence_prediction[0] > 0.5)
-            drought_severity = np.argmax(severity_prediction[0])
+            # Extract predictions
+            drought_occurrence = float(occurrence_prediction[0][0])
+            drought_severity = int(np.argmax(severity_prediction[0]))
 
-            # Store prediction data
+            # Create PredictionData object
             prediction = PredictionData(
                 month=future_month,
                 year=future_year,
@@ -139,9 +107,9 @@ async def predict_next_three_months():
             predictions.append(prediction)
 
         return predictions
-
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
