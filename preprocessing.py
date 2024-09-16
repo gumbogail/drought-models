@@ -76,7 +76,7 @@ def fetch_weather_data(latitude, longitude):
         print(f"Error fetching data from WeatherAPI: {e}")
 
 # Example usage with hardcoded latitude and longitude (update as needed)
-fetch_weather_data(17.083, -22.57)
+fetch_weather_data(18.4930, -22.9671)
 
 # Check database
 def check_database():
