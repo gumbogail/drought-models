@@ -4,13 +4,17 @@ from datetime import datetime
 import tensorflow as tf
 import sqlite3
 import requests
+from fastapi import FastAPI
+
+# Initialize FastAPI app
+app = FastAPI()
 
 # Initialize TensorFlow models
 drought_occurrence_model = tf.keras.models.load_model('drought_occurrence_model.keras')
 drought_severity_model = tf.keras.models.load_model('drought_severity_model.keras')
 
 # SQLite database connection
-conn = sqlite3.connect('weather_data.db')
+conn = sqlite3.connect('weather_data.db', check_same_thread=False)
 cursor = conn.cursor()
 
 def fetch_historical_rainfall():
@@ -75,10 +79,32 @@ def fetch_weather_data(latitude, longitude):
     except Exception as e:
         print(f"Error fetching data from WeatherAPI: {e}")
 
-# Example usage with hardcoded latitude and longitude (update as needed)
-fetch_weather_data(18.4930, -22.9671)
+# FastAPI route to fetch predictions based on dynamic latitude and longitude
+@app.get("/predict_next_three_months")
+def predict_next_three_months(latitude: float, longitude: float):
+    """Fetches weather data and stores predictions in the database based on user-provided latitude and longitude"""
+    fetch_weather_data(latitude, longitude)
+    
+    # Example query to fetch results from the database for the past 3 months (you can adjust this)
+    cursor.execute('''
+        SELECT month, drought_occurrence, drought_severity 
+        FROM WeatherData 
+        WHERE latitude = ? AND longitude = ? 
+        ORDER BY date DESC LIMIT 3
+    ''', (latitude, longitude))
+    rows = cursor.fetchall()
 
-# Check database
+    predictions = []
+    for row in rows:
+        predictions.append({
+            'month': row[0],
+            'drought_occurrence': row[1],
+            'drought_severity': row[2]
+        })
+    
+    return predictions
+
+# Check database function for debugging
 def check_database():
     """Check the SQLite database to see if data has been inserted"""
     try:
@@ -90,5 +116,5 @@ def check_database():
     except Exception as e:
         print(f"Error reading database: {e}")
 
-# Call this function to check the database content
-check_database()
+# You can call this function to check the database content
+# check_database()
