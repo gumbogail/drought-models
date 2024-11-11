@@ -9,7 +9,6 @@ from dateutil.relativedelta import relativedelta
 from fastapi.middleware.cors import CORSMiddleware
 # Initialize FastAPI app
 app = FastAPI()
-from fastapi.middleware.cors import CORSMiddleware
 
 app.add_middleware(
     CORSMiddleware,
