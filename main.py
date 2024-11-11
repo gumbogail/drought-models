@@ -9,6 +9,15 @@ from dateutil.relativedelta import relativedelta
 
 # Initialize FastAPI app
 app = FastAPI()
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # You can specify your Flutter app URL here for more security
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Load your models
 drought_occurrence_model = tf.keras.models.load_model('drought_occurrence_model.keras')
