@@ -6,7 +6,7 @@ import tensorflow as tf
 import sqlite3
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
-
+from fastapi.middleware.cors import CORSMiddleware
 # Initialize FastAPI app
 app = FastAPI()
 from fastapi.middleware.cors import CORSMiddleware
