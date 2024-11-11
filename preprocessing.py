@@ -69,7 +69,7 @@ def process_and_store_data(data, latitude, longitude):
 def fetch_weather_data(latitude, longitude):
     """Fetches weather data from WeatherAPI"""
     try:
-        api_url = f"http://api.weatherapi.com/v1/history.json?key=3a0d4c4e3e304fdd92e190019243007&q={latitude},{longitude}&dt={datetime.now().strftime('%Y-%m-%d')}"
+        api_url = f"http://api.weatherapi.com/v1/history.json?key=44c35b150e054b908d461545241111&q={latitude},{longitude}&dt={datetime.now().strftime('%Y-%m-%d')}"
         response = requests.get(api_url)
         weather_data = response.json()
 
